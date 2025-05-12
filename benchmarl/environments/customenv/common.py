@@ -72,6 +72,8 @@ class MultiAgentUAVBMWrapper(TaskClass):
             seed=seed,
             device=device,
             return_state=False,
+            # done_on_any=False,
+            # use_mask=True,
             **config,
         )
 
