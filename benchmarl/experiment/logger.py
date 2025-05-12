@@ -188,11 +188,19 @@ class Logger:
             return
 
         # Cut rollouts at first done
+        win_rate = [{agent: 0 for agent in self.group_map.keys()} for _ in range(len(rollouts))]
+        total_win_rate = 0.0
         max_length_rollout_0 = 0
         for i in range(len(rollouts)):
             r = rollouts[i]
             next_done = self._get_global_done(r).squeeze(-1)
-
+            for group in self.group_map.keys():
+                group_info = self._get_agent_info(group, r).squeeze(-1)
+                win = group_info["GOAL REACHED"].nonzero(as_tuple=True)[0]
+                # assert win.numel() <= 1, "An agent can reach the goal only once"
+                win_rate[i][group] = 1.0 if win.numel() > 0 else 0.0
+            if all([win_rate[i][agent] == 1.0 for agent in win_rate[i].keys()]):
+                total_win_rate += 1.0
             # First done index for this traj
             done_index = next_done.nonzero(as_tuple=True)[0]
             if done_index.numel() > 0:
@@ -203,6 +211,7 @@ class Logger:
             rollouts[i] = r
 
         to_log = {}
+        # individual_win_rate = {group: sum([win_rate[i][group] for i in range(len(win_rate))]) for group in self.group_map.keys()}
         json_metrics = {}
         for group in self.group_map.keys():
             # returns has shape (n_episodes)
@@ -213,6 +222,8 @@ class Logger:
             self._log_min_mean_max(
                 to_log, f"eval/{group}/reward/episode_reward", returns
             )
+            to_log[f"eval/{group}/win_rate"] = sum(win_rate[i][group] for i in range(len(rollouts))) / len(rollouts)
+
             json_metrics[group + "_return"] = returns
 
         mean_group_return = self._log_global_episode_reward(
@@ -220,7 +231,7 @@ class Logger:
         )
         # mean_group_return has shape (n_episodes) as we take the mean groups
         json_metrics["return"] = mean_group_return
-
+        to_log["eval/win_rate"] = total_win_rate / len(rollouts)
         to_log["eval/reward/episode_len_mean"] = sum(
             td.batch_size[0] for td in rollouts
         ) / len(rollouts)
@@ -298,6 +309,13 @@ class Logger:
             done = td.get(("next", "done")).expand(td.get(group).shape).unsqueeze(-1)
 
         return done.any(-2) if remove_agent_dim else done
+
+    def _get_agent_info(
+      self, group: str, td: TensorDictBase, remove_agent_dim: bool = False
+    ):
+        info = td.get(("next", group, "info"))
+
+        return info
 
     def _get_global_done(
         self,

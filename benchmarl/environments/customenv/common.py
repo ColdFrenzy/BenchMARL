@@ -152,7 +152,7 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
     @staticmethod
     def env_name() -> str:
         # The name of the environment in the benchmarl/conf/task folder
-        return "multi_agent_cont_uav"
+        return "customenv"
 
     def log_info(self, batch: TensorDictBase) -> Dict[str, float]:
         # Optionally return a str->float dict with extra things to log
