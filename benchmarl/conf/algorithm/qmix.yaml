@@ -1,8 +1,8 @@
+# benchmarl/conf/algorithm/qmix.yaml
 defaults:
-  - qmix_config
+  - qmix_config     # dataclass QmixConfig registrata da BenchMARL
   - _self_
 
-
-mixing_embed_dim: 32
-delay_value: True
-loss_function: "l2"
+mixing_embed_dim: 256      # Appendix F, hidden dim
+delay_value: true          # target network separato
+loss_function: "l2"        # TD-error L2
