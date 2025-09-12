@@ -213,10 +213,15 @@ class Logger:
         to_log = {}
         # individual_win_rate = {group: sum([win_rate[i][group] for i in range(len(win_rate))]) for group in self.group_map.keys()}
         json_metrics = {}
+        heuristic_metrics = {}
         for group in self.group_map.keys():
             # returns has shape (n_episodes)
             returns = torch.stack(
                 [self._get_reward(group, td).sum(0).mean() for td in rollouts],
+                dim=0,
+            )
+            heuristic_returns = torch.stack(
+                [td.get(("next", group, "info"))["heuristic reward"].sum(0).mean() for td in rollouts],
                 dim=0,
             )
             self._log_min_mean_max(
@@ -225,12 +230,18 @@ class Logger:
             to_log[f"eval/{group}/win_rate"] = sum(win_rate[i][group] for i in range(len(rollouts))) / len(rollouts)
 
             json_metrics[group + "_return"] = returns
-
+            heuristic_metrics[group + "_heuristic_return"] = heuristic_returns
+        group_reward_without_heuristic = [a_i - b_i for a_i, b_i in zip(list(json_metrics.values()), list(heuristic_metrics.values()))]
         mean_group_return = self._log_global_episode_reward(
-            list(json_metrics.values()), to_log, prefix="eval"
+            group_reward_without_heuristic, to_log, prefix="eval"
         )
+        mean_group_heuristic_return = self._log_global_heuristic_episode_reward(
+            list(heuristic_metrics.values()), to_log, prefix="eval"
+        )
+
         # mean_group_return has shape (n_episodes) as we take the mean groups
         json_metrics["return"] = mean_group_return
+        json_metrics["heuristic_return"] = mean_group_heuristic_return
         to_log["eval/win_rate"] = total_win_rate / len(rollouts)
         to_log["eval/reward/episode_len_mean"] = sum(
             td.batch_size[0] for td in rollouts
@@ -398,6 +409,19 @@ class Logger:
             )
 
         return episode_rewards
+
+    def _log_global_heuristic_episode_reward(
+        self, heuristic_rewards: List[Tensor], to_log: Dict[str, Tensor], prefix: str
+    ):
+        # Each element in the list is the episode reward (with shape n_episodes) for the group at the global done,
+        # so they will have same shape as done is shared
+        heuristic_rewards = torch.stack(heuristic_rewards, dim=0).mean(
+            0
+        ) # Mean over groups
+        if heuristic_rewards.numel() > 0:
+            to_log.update({f"{prefix}/reward/heuristic_episode_reward": heuristic_rewards.mean().item()})
+
+        return heuristic_rewards
 
     def _log_min_mean_max(self, to_log: Dict[str, Tensor], key: str, value: Tensor):
         to_log.update(
