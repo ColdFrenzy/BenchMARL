@@ -50,12 +50,11 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
         # )
         config = copy.deepcopy(self.config)
         return lambda: PettingZooWrapper(
-            MultiAgentContinuousUAVPettingZooWrapper(MultiAgentContinuousUAV),
+            MultiAgentContinuousUAVPettingZooWrapper(MultiAgentContinuousUAV, config),
             categorical_actions=False,
             seed=seed,
             device=device,
             return_state=False,
-            **config,
         )
     
 

@@ -227,7 +227,7 @@ class Logger:
             self._log_min_mean_max(
                 to_log, f"eval/{group}/reward/episode_reward", returns
             )
-            to_log[f"eval/{group}/win_rate"] = sum(win_rate[i][group] for i in range(len(rollouts))) / len(rollouts)
+            # to_log[f"eval/{group}/win_rate"] = sum(win_rate[i][group] for i in range(len(rollouts))) / len(rollouts)
 
             json_metrics[group + "_return"] = returns
             heuristic_metrics[group + "_heuristic_return"] = heuristic_returns
@@ -242,7 +242,7 @@ class Logger:
         # mean_group_return has shape (n_episodes) as we take the mean groups
         json_metrics["return"] = mean_group_return
         json_metrics["heuristic_return"] = mean_group_heuristic_return
-        to_log["eval/win_rate"] = total_win_rate / len(rollouts)
+        # to_log["eval/win_rate"] = total_win_rate / len(rollouts)
         to_log["eval/reward/episode_len_mean"] = sum(
             td.batch_size[0] for td in rollouts
         ) / len(rollouts)
