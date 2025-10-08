@@ -12,8 +12,8 @@ from torch import Tensor
 from torchrl.data import CompositeSpec
 from torchrl.envs import EnvBase, RewardSum, Transform
 from torchrl.envs.libs.pettingzoo import PettingZooWrapper
-from src.environments.multi_agent.ma_cont_uav_env_pettinzoo import MultiAgentContinuousUAVPettingZooWrapper
-from src.environments.multi_agent.ma_cont_uav_env import MultiAgentContinuousUAV
+from live_upstream_multi_uav.environments.multi_agent.ma_cont_uav_env_pettinzoo import MultiAgentContinuousUAVPettingZooWrapper
+from live_upstream_multi_uav.environments.multi_agent.ma_cont_uav_env import MultiAgentContinuousUAV
 
 
 class MultiAgentContinuousUAVTasks(Task):
