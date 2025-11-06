@@ -214,14 +214,25 @@ class Logger:
         # individual_win_rate = {group: sum([win_rate[i][group] for i in range(len(win_rate))]) for group in self.group_map.keys()}
         json_metrics = {}
         heuristic_metrics = {}
+        formation_metrics = {}
+        beta_metrics = {}
         for group in self.group_map.keys():
             # returns has shape (n_episodes)
             returns = torch.stack(
                 [self._get_reward(group, td).sum(0).mean() for td in rollouts],
                 dim=0,
             )
+            # return the sum of heuristic reward across the episode for one agent
             heuristic_returns = torch.stack(
                 [td.get(("next", group, "info"))["heuristic reward"].sum(0).mean() for td in rollouts],
+                dim=0,
+            )
+            agent_in_view = torch.stack(
+                [td.get(("next", group, "info"))["beta"].sum(0).mean() for td in rollouts],
+                dim=0,
+            )
+            formation_reached = torch.stack(
+                [td.get(("next", group, "info"))["formation reached"].sum(0).mean() for td in rollouts],
                 dim=0,
             )
             self._log_min_mean_max(
@@ -231,6 +242,8 @@ class Logger:
 
             json_metrics[group + "_return"] = returns
             heuristic_metrics[group + "_heuristic_return"] = heuristic_returns
+            beta_metrics[group + "_beta"] = agent_in_view
+            formation_metrics[group + "_formation"] = formation_reached
         group_reward_without_heuristic = [a_i - b_i for a_i, b_i in zip(list(json_metrics.values()), list(heuristic_metrics.values()))]
         mean_group_return = self._log_global_episode_reward(
             group_reward_without_heuristic, to_log, prefix="eval"
@@ -238,10 +251,18 @@ class Logger:
         mean_group_heuristic_return = self._log_global_heuristic_episode_reward(
             list(heuristic_metrics.values()), to_log, prefix="eval"
         )
+        mean_group_beta = self._log_global_beta(
+            list(beta_metrics.values()), to_log, prefix="eval"
+        )
+        mean_group_formation = self._log_global_formation(
+            list(formation_metrics.values()), to_log, prefix="eval"
+        )
 
         # mean_group_return has shape (n_episodes) as we take the mean groups
         json_metrics["return"] = mean_group_return
         json_metrics["heuristic_return"] = mean_group_heuristic_return
+        json_metrics["beta"] = mean_group_beta
+        json_metrics["formation"] = mean_group_formation
         # to_log["eval/win_rate"] = total_win_rate / len(rollouts)
         to_log["eval/reward/episode_len_mean"] = sum(
             td.batch_size[0] for td in rollouts
@@ -422,6 +443,26 @@ class Logger:
             to_log.update({f"{prefix}/reward/heuristic_episode_reward": heuristic_rewards.mean().item()})
 
         return heuristic_rewards
+
+    def _log_global_formation(
+        self, formation: List[Tensor], to_log: Dict[str, Tensor], prefix: str
+    ):
+        formation = torch.stack(formation, dim=0).mean(
+            0
+        )  # Mean over groups
+        if formation.numel() > 0:
+            to_log.update({f"{prefix}/Average_UAVs_in_formation": formation.mean().item()})
+        return formation
+    
+    def _log_global_beta(
+        self, beta: List[Tensor], to_log: Dict[str, Tensor], prefix: str
+    ):
+        beta = torch.stack(beta, dim=0).mean(
+            0
+        )  # Mean over groups
+        if beta.numel() > 0:
+            to_log.update({f"{prefix}/Average_UAVs_in_view": beta.mean().item()})
+        return beta
 
     def _log_min_mean_max(self, to_log: Dict[str, Tensor], key: str, value: Tensor):
         to_log.update(
