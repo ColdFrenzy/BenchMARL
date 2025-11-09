@@ -55,6 +55,7 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
             seed=seed,
             device=device,
             return_state=False,
+            group_map={"agents": list(config["agents_pos"].keys())},
         )
     
 
@@ -80,8 +81,9 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
     def group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         # The group map mapping group names to agent names
         # The data in the tensordict will havebe presented this way
-        # return {"agents": [agent for agent in env.agents]}
-        return env.group_map
+        if hasattr(env, "group_map"):
+            return env.group_map
+        return {"agents": [agent.name for agent in env.agents]}
     
     def state_spec(self, env: EnvBase) -> Optional[CompositeSpec]:
         # A spec for the state.
@@ -91,33 +93,26 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
     def observation_spec(self, env: EnvBase) -> CompositeSpec:
         # A spec for the observation.
         # Must be a CompositeSpec with one (group_name, observation_key) entry per group.
-        # group = self.group_map(env)
-        # for group_name in group:
-        #     observation_spec, _, _, _ = env._make_group_specs(group_name=group_name, agent_names=group[group_name])
-        #     observation_spec = CompositeSpec({group_name: observation_spec})
-        # return observation_spec
-        observation_spec = env.observation_spec.clone()
+        # for group in self.group_map(env):
+        #     if "info" in observation_spec[group]:
+        #         del observation_spec[(group, "info")]
+
+        observation_spec = env.full_observation_spec_unbatched.clone()
         for group in self.group_map(env):
-            group_obs_spec = observation_spec[group]
-            for key in list(group_obs_spec.keys()):
-                if key != "observation":
-                    del group_obs_spec[key]
-        if "state" in observation_spec.keys():
-            del observation_spec["state"]
+            # for key in observation_spec[group].keys():
+            #     if key != "observation":
+            #         del observation_spec[group][key]
+            if "info" in observation_spec[group]:
+                del observation_spec[(group, "info")]
+        # if "state" in observation_spec.keys():
+        #     del observation_spec["state"]
         return observation_spec
     
     def action_spec(self, env: EnvBase) -> CompositeSpec:
         # A spec for the action.
         # If provided, must be a CompositeSpec with one (group_name, "action") entry per group.
-        # for group in self.group_map(env):
-        #     action_spec = CompositeSpec({group: env.full_action_spec_unbatched["a1"]})
-        # return action_spec
-        # group = self.group_map(env)
-        # for group_name in group:
-        #     _, action_spec, _, _ = env._make_group_specs(group_name=group_name, agent_names=group[group_name])
-        #     action_spec = CompositeSpec({group_name: action_spec})
-        # return action_spec
-        return env.full_action_spec
+        # return env.full_action_spec
+        return env.full_action_spec_unbatched
 
 
 
@@ -129,24 +124,16 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
     def info_spec(self, env: EnvBase) -> Optional[CompositeSpec]:
         # A spec for the info.
         # If provided, must be a CompositeSpec with one (group_name, "info") entry per group (this entry can be composite).
-        # observation_spec = env.observation_spec.clone()
-        # group = self.group_map(env)
-        # for group_name in group:
-        #     observation_spec, _, _, _ = env._make_group_specs(group_name=group_name, agent_names=group[group_name])
-        #     for key in list(observation_spec.keys()):
-        #         if key != "info":
-        #             del observation_spec[key]
-        #     observation_spec = CompositeSpec({group_name: observation_spec})
-        # return observation_spec
-        observation_spec = env.observation_spec.clone()
+        info_spec = env.full_observation_spec_unbatched.clone()
         for group in self.group_map(env):
-            group_obs_spec = observation_spec[group]
-            for key in list(group_obs_spec.keys()):
-                if key != "info":
-                    del group_obs_spec[key]
-        if "state" in observation_spec.keys():
-            del observation_spec["state"]
-        return observation_spec
+            if "observation" in info_spec[group]:
+                del info_spec[(group, "observation")]
+            # for key in info_spec[group].keys():
+            #     if key != "info":
+            #         del info_spec[group][key]
+        # if "state" in info_spec.keys():
+        #     del info_spec["state"]
+        return info_spec
 
     @staticmethod
     def env_name() -> str:

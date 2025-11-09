@@ -425,9 +425,7 @@ class Logger:
             0
         )  # Mean over groups
         if episode_rewards.numel() > 0:
-            self._log_min_mean_max(
-                to_log, f"{prefix}/reward/episode_reward", episode_rewards
-            )
+            to_log.update({f"{prefix}/reward/episode_reward_without_heuristic_mean": episode_rewards.mean().item()})
 
         return episode_rewards
 
@@ -440,7 +438,7 @@ class Logger:
             0
         ) # Mean over groups
         if heuristic_rewards.numel() > 0:
-            to_log.update({f"{prefix}/reward/heuristic_episode_reward": heuristic_rewards.mean().item()})
+            to_log.update({f"{prefix}/reward/heuristic_episode_reward_mean": heuristic_rewards.mean().item()})
 
         return heuristic_rewards
 
@@ -451,7 +449,7 @@ class Logger:
             0
         )  # Mean over groups
         if formation.numel() > 0:
-            to_log.update({f"{prefix}/Average_UAVs_in_formation": formation.mean().item()})
+            to_log.update({f"{prefix}/Average_UAVs_in_formation_mean": formation.mean().item()})
         return formation
     
     def _log_global_beta(
@@ -461,7 +459,7 @@ class Logger:
             0
         )  # Mean over groups
         if beta.numel() > 0:
-            to_log.update({f"{prefix}/Average_UAVs_in_view": beta.mean().item()})
+            to_log.update({f"{prefix}/Average_UAVs_in_view_mean": beta.mean().item()})
         return beta
 
     def _log_min_mean_max(self, to_log: Dict[str, Tensor], key: str, value: Tensor):
