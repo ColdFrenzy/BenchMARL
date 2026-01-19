@@ -1036,3 +1036,44 @@ class Experiment(CallbackNotifier):
         )
         print(f"\nReloaded experiment {experiment.name} from {restore_file}.")
         return experiment
+
+    @staticmethod
+    def reload_configs_from_file(restore_file: str) -> tuple[Task, AlgorithmConfig, ModelConfig, int, ExperimentConfig, List[Callback], ModelConfig]:
+        """
+        Restores only the configuration from the checkpoint file.
+
+        This method expects the same folder structure created when an experiment is run.
+        The checkpoint file (``restore_file``) is in the checkpoints directory and a config.pkl file is
+        present a level above at restore_file/../../config.pkl
+
+        Args:
+            restore_file (str): The checkpoint file (.pt) of the experiment reload.
+        Returns:
+            task (Task): The reloaded task.
+            algorithm_config (AlgorithmConfig): The reloaded algorithm configuration.
+            model_config (ModelConfig): The reloaded model configuration.
+            seed (int): The reloaded seed.
+            experiment_config (ExperimentConfig): The reloaded experiment configuration.
+            callbacks (list of Callback): The reloaded callbacks.
+            critic_model_config (ModelConfig): The reloaded critic model configuration.
+        """
+        experiment_folder = Path(restore_file).parent.parent.resolve()
+        config_file = experiment_folder / "config.pkl"
+        if not os.path.exists(config_file):
+            raise ValueError("config.pkl file not found in experiment folder.")
+        with open(config_file, "rb") as f:
+            task = pickle.load(f)
+            task_config = pickle.load(f)
+            algorithm_config = pickle.load(f)
+            model_config = pickle.load(f)
+            seed = pickle.load(f)
+            experiment_config = pickle.load(f)
+            critic_model_config = pickle.load(f)
+            callbacks = pickle.load(f)
+        task.config = task_config
+        experiment_config.restore_file = restore_file
+
+        print(f"\nReloaded experiment configs from {restore_file}.")
+        return task, algorithm_config, model_config, seed, experiment_config, callbacks, critic_model_config
+
+
