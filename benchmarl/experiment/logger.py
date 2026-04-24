@@ -227,6 +227,10 @@ class Logger:
                 [td.get(("next", group, "info"))["heuristic reward"].sum(0).mean() for td in rollouts],
                 dim=0,
             )
+            collisions = torch.stack(
+                [td.get(("next", group, "info"))["collisions"].sum(0).mean() for td in rollouts],
+                dim=0,
+            )
             agent_in_view = torch.stack(
                 [td.get(("next", group, "info"))["beta"].sum(0).mean() for td in rollouts],
                 dim=0,
@@ -237,6 +241,9 @@ class Logger:
             )
             self._log_min_mean_max(
                 to_log, f"eval/{group}/reward/episode_reward", returns
+            )
+            self._log_min_mean_max(
+                to_log, f"eval/{group}/reward/collisions", collisions
             )
             # to_log[f"eval/{group}/win_rate"] = sum(win_rate[i][group] for i in range(len(rollouts))) / len(rollouts)
 
