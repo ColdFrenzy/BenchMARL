@@ -56,6 +56,7 @@ class MultiAgentContinuousUAVBMWrapper(TaskClass):
             device=device,
             return_state=False,
             group_map={"agents": list(config["agents_pos"].keys())},
+            # done_on_any = None is True by default on ParallelEnv so we are fine.
         )
     
 
